@@ -1,0 +1,33 @@
+user_data = 
+	LOAD 'yelp_academic_dataset_user.json'
+	USING JsonLoader(
+		'user_id:chararray,
+		name:chararray,
+		review_count:int,
+		yelping_since:chararray,
+        friends:bag{a:tuple(a:chararray)},
+        useful:int,
+        funny:int,
+        cool:int,
+        fans:int,
+        elite:bag{a:tuple(a:int)},
+        average_stars:float,
+        compliment_hot:int,
+        compliment_more:int,
+        compliment_profile:int,
+        compliment_cute:int,
+        compliment_list:int,
+        compliment_note:int,
+        compliment_plain:int,
+        compliment_cool:int,
+        compliment_funny:int,
+        compliment_write:int,
+        compliment_photos:int,
+        type:chararray'
+    );
+    
+user = FOREACH user_data GENERATE name, review_count;
+
+ordered = ORDER user BY review_count DESC;
+
+STORE ordered INTO 'yelp/answer41pig.csv’ USING PigStorage(',');

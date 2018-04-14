@@ -1,0 +1,14 @@
+from pyspark.sql import SQLContext
+
+sqlContext = SQLContext(sc)
+
+bdf = sqlContext.read.json("yelp_academic_dataset_business.json")
+
+result = bdf.select(pyspark.sql.functions.explode(bdf.categories).alias("category"), bdf.business_id,bdf.review_count,bdf.city,bdf.state,bdf.latitude,bdf.longitude,bdf.stars)
+
+result.registerTempTable("Business")
+
+Final = sqlContext.sql("select category , AVG(stars) as number_of_stars from Business where latitude> 42.931739 and latitude < 43.221261 and longitude >-89.610310 and longitude < -89214450 group by category ")
+
+Final.write.mode('append').json("q3/average_stars.json")
+

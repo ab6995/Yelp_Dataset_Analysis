@@ -1,0 +1,79 @@
+business = 
+	LOAD 'yelp_academic_dataset_business.json'
+	USING JsonLoader(
+    	'business_id:chararray,
+        name:chararray,
+        neighborhood:chararray,
+        address:chararray,
+        city:chararray, 
+        state:chararray,
+        postal_code:chararray,
+        latitude:float,
+        longitude:float,
+        stars:float,
+        review_count:int,
+        is_open:int,
+        attributes:bag{a:tuple(a:chararray)},
+        categories:bag{a:tuple(a:chararray)},
+        hours:bag{a:tuple(a:chararray)},
+        type:chararray'
+    );
+    
+--LAT 42.908333 43.241667 
+--LONG -89.250556 -89.583889
+
+business_filtered = FILTER business BY
+    (latitude>42.908333) AND 
+    (latitude<43.241667) AND 
+    (longitude<-89.250556) AND 
+    (longitude>-89.583889);
+
+business_category_not_null = FILTER business_filtered BY (categories IS NOT NULL);
+    
+business_food = FOREACH business_category_not_null {
+	food = FILTER categories BY (a MATCHES '.*Food.*');
+    GENERATE business_id, name, stars, (IsEmpty(food.$0) ? NULL : food) AS food;
+}
+
+business_filtered_food = FILTER business_food BY (food IS NOT NULL);
+
+
+business_ordered = ORDER business_filtered_food BY stars DESC;
+top_10 = LIMIT business_ordered 10;
+
+reviews = 
+	LOAD 'yelp_academic_dataset_review.json'
+	USING JsonLoader(
+    	'review_id:chararray,
+        user_id:chararray,
+        business_id:chararray,
+        stars:float, 
+        date:chararray,
+        text:chararray,
+        useful:int,
+        funny:int,
+        cool:int,
+        type:chararray'
+    );
+
+reviews_month = FOREACH reviews GENERATE business_id, stars AS review_stars, GetMonth(ToDate(date, 'yyyy-MM-dd')) AS month;
+month_filtered = FILTER reviews_month BY (month >= 6) AND (month <= 12);
+review_joined = JOIN top_10 BY business_id, month_filtered BY business_id;
+grouped = GROUP review_joined BY (top_10::business_id, name, month);
+average_stars = FOREACH grouped GENERATE 
+				FLATTEN(group),
+                AVG(review_joined.review_stars);
+
+STORE average_stars INTO 'yelp/5a_top10'	
+    USING PigStorage(',');
+    
+business_ordered_bottom = ORDER business_filtered_food BY stars ASC;
+bottom_10 = LIMIT business_ordered_bottom 10;
+review_joined_bottom = JOIN bottom_10 BY business_id, month_filtered BY business_id;
+grouped_bottom = GROUP review_joined_bottom BY (bottom_10::business_id, name, month);
+average_stars_bottom = FOREACH grouped_bottom GENERATE 
+				FLATTEN(group),
+                AVG(review_joined_bottom.review_stars);
+
+STORE average_stars_bottom INTO 'yelp/5b_bottom10'	
+    USING PigStorage(',');

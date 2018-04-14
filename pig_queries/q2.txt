@@ -1,0 +1,32 @@
+business = 
+	LOAD 'yelp_academic_dataset_business.json'
+	USING JsonLoader(
+    	'business_id:chararray,
+        name:chararray,
+        neighborhood:chararray,
+        address:chararray,
+        city:chararray, 
+        state:chararray,
+        postal_code:chararray,
+        latitude:float,
+        longitude:float,
+        stars:float,
+        review_count:int,
+        is_open:int,
+        attributes:bag{a:tuple(a:chararray)},
+        categories:bag{a:tuple(a:chararray)},
+        hours:bag{a:tuple(a:chararray)},
+        type:chararray'
+    );
+    
+categories = FOREACH business GENERATE city, stars, FLATTEN(categories) AS category;
+
+groups = GROUP categories BY (category, city);
+
+result = 
+	FOREACH groups 
+	GENERATE FLATTEN(group), AVG(categories.stars) AS rank;
+
+ordered = ORDER result BY category, rank DESC;
+        
+STORE ordered INTO 'yelp/answer2pig' USING PigStorage(',');

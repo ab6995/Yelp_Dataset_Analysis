@@ -1,0 +1,13 @@
+val user = spark.read.json("/Usersab6995/Library/Spark.7/bin/yelp_academic_dataset_user.json")
+
+import spark.implicits._
+
+user.registerTempTable("Script4a")
+
+import org.apache.spark.sql.hive.HiveContext
+
+val sqlContext = new HiveContext(sc)
+
+val df = sqlContext.sql("select user_id,name,review_count from Script4a order by review_count desc")
+
+df.write.format("com.databricks.spark.csv").save("/Users/ab6995/Downloads/q4")

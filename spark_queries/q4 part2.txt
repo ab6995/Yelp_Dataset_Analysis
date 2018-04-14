@@ -1,0 +1,25 @@
+from pyspark.sql import SQLContext
+
+sqlContext = SQLContext(sc)
+
+bdf = sqlContext.read.json("yelp_academic_dataset_business.json")
+
+rdf = sqlContext.read.json("yelp_academic_dataset_review.json")
+
+udf = sqlContext.read.json("yelp_academic_dataset_user.json")
+
+rdf.registerTempTable("Reviews")
+
+sorted_user = udf.sort(udf.review_count.desc())
+
+top_10 = sorted_user.limit(10)
+
+top_10.registerTempTable("top10user")
+
+flatten_category = bdf.select(pyspark.sql.functions.explode(bdf.categories).alias("category"),bdf.business_id,bdf.stars,bdf.city)
+
+flatten_category.registerTempTable("Business")
+
+Final = sqlContext.sql("select AVG(Reviews.stars) as average_stars, Reviews.user_id, category from Business, Reviews, top10user where top10user.user_id=Reviews.user_id and Reviews.business_id=Business.business_id group by Reviews.user_id, category order by Reviews.user_id")
+
+Final.write.mode('append').json("output_spark_4b/top10_reviews_stars.json")

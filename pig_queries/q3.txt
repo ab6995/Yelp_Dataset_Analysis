@@ -1,0 +1,42 @@
+business = 
+	LOAD 'yelp_academic_dataset_business.json'
+	USING JsonLoader(
+    	'business_id:chararray,
+        name:chararray,
+        neighborhood:chararray,
+        address:chararray,
+        city:chararray, 
+        state:chararray,
+        postal_code:chararray,
+        latitude:float,
+        longitude:float,
+        stars:float,
+        review_count:int,
+        is_open:int,
+        attributes:bag{a:tuple(a:chararray)},
+        categories:bag{a:tuple(a:chararray)},
+        hours:bag{a:tuple(a:chararray)},
+        type:chararray'
+    );
+    
+--LAT 42.908333 43.241667 
+--LON -89.250556 -89.583889
+
+filtered = FILTER business BY
+    (latitude>42.908333) AND 
+    (latitude<43.241667) AND 
+    (longitude<-89.250556) AND 
+    (longitude>-89.583889);
+    
+categories = FOREACH filtered GENERATE
+        	stars, FLATTEN(categories) AS category;
+
+groups = GROUP categories BY category;
+
+result = FOREACH groups GENERATE 
+    		FLATTEN(group),
+        	AVG(business_categories.stars) as rank;
+            
+ordered = ORDER result BY rank DESC;
+        
+STORE ordered INTO 'yelp/ans3pig' USING PigStorage(',');

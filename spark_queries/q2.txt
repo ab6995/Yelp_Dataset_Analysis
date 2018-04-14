@@ -1,0 +1,13 @@
+from pyspark.sql import SQLContext
+
+sqlContext= SQLContext(sc)
+
+bdf = sqlContext.read.json("yelp_academic_dataset_business.json")
+
+result = bdf.select(pyspark.sql.functions.explode(bdf.categories).alias("category"),bdf.business_id,bdf.city,bdf.stars)
+
+result.registerTempTable("Business")
+
+Final = sqlContext.sql("select city, category, AVG(stars) as average_stars from Business group by city, category order by average_stars DESC")
+
+Final.write.mode('append').json("q2/avg_number_stars.json")

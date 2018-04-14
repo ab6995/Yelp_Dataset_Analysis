@@ -1,0 +1,37 @@
+from pyspark.sql import SQLContext
+
+sqlContext = SQLContext(sc)
+
+bdf = sqlContext.read.json("yelp_academic_dataset_business.json")
+
+rdf = sqlContext.read.json("yelp_academic_dataset_review.json")
+
+bdf.registerTempTable("Business")
+
+rdf.registerTempTable("Reviews")
+
+UWM_loc = sqlContext.sql(" select business_id,satrs from business where where latitude> 42.931739 and latitude < 43.221261 and longitude >-89.610310 and longitude < -89214450")
+
+sorted_business_UWM = UWM_loc.sort(UWM_loc.stars.desc())
+
+top10_UWM = sorted_business_UWM.limit(10)
+
+top10_UWM.registerTempTable("top10")
+
+reverse_sorted_business = UWM_loc.sort(srea_UWM.stars.asc())
+
+bottom10_UWM = reverse_sorted_business.limit(10)
+
+bottom10_UWM.registerTempTable("bottom10")
+
+rdf_month = rev.select(pyspark.sql.functions.year(rdf.date).alias(year), pyspark.sql.functions.month(rdf.date).alias(month),rdf.business_id,rdf.stars)
+
+rdf_month.registerTempTable("Review_month")
+
+TOP_10_business = ("select AVG(Review_month.stars) as average_no_of_stars, Review_month.business_id, Review_month.year, Review_month.month from Review_month, top10 where Review_month.business_id=top10. Review_month group by Review_month.business_id, year, month ")
+
+BOTTOM_10_business = ("select AVG(Review_month.stars) as average_no_of_stars, Review_month.business_id, Review_month.year, Review_month.month from Review_month, bottom10 where Review_month.business_id=bottom10. Review_month group by Review_month.business_id, year, month ")
+
+TOP_10_business.write.mode(‘append’).json("output_spark_top10.json")
+
+BOTTOM_10_business.write.mode(‘append’).json("output_spark_bottom10.json")
